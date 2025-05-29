@@ -1,0 +1,77 @@
+networks:
+  default:
+  kiosk-rdp:
+
+services:
+  xrdp-kiosk-1:
+    build:
+      context: ./xrdp
+    container_name: xrdp-kiosk-1
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./ssl-certs/${CERT_DIR:-default}/cert.pem:/tmp/cert.pem:ro
+    networks:
+      - kiosk-rdp
+
+  xrdp-kiosk-2:
+    build:
+      context: ./xrdp
+    container_name: xrdp-kiosk-2
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./ssl-certs/${CERT_DIR:-default}/cert.pem:/tmp/cert.pem:ro
+    networks:
+      - kiosk-rdp
+
+  xrdp-kiosk-3:
+    build:
+      context: ./xrdp
+    container_name: xrdp-kiosk-3
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./ssl-certs/${CERT_DIR:-default}/cert.pem:/tmp/cert.pem:ro
+    networks:
+      - kiosk-rdp
+
+  xrdp-kiosk-4:
+    build:
+      context: ./xrdp
+    container_name: xrdp-kiosk-4
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./ssl-certs/${CERT_DIR:-default}/cert.pem:/tmp/cert.pem:ro
+    networks:
+      - kiosk-rdp
+
+  xrdp-kiosk-5:
+    build:
+      context: ./xrdp
+    container_name: xrdp-kiosk-5
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./ssl-certs/${CERT_DIR:-default}/cert.pem:/tmp/cert.pem:ro
+    networks:
+      - kiosk-rdp
+
+  xrdp-kiosk-gateway:
+    build:
+      context: ./xrdp-gateway
+    container_name: xrdp-kiosk-gateway
+    restart: always
+    env_file:
+      - .env
+    networks:
+      - default
+      - kiosk-rdp
+    ports:
+      - "3390:3390"
