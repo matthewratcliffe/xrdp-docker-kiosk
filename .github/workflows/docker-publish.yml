@@ -1,0 +1,90 @@
+name: Docker Build & Push
+
+on:
+  push:
+    branches: [ "master" ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.5.0
+        with:
+          cosign-release: 'v2.2.4'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3.0.0
+
+      - name: Log into GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3.0.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build and push XRDP image
+      - name: Extract metadata for xrdp
+        id: meta-xrdp
+        uses: docker/metadata-action@v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-xrdp
+
+      - name: Build and push xrdp Docker image
+        id: build-and-push-xrdp
+        uses: docker/build-push-action@v5.0.0
+        with:
+          context: ./xrdp
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-xrdp.outputs.tags }}
+          labels: ${{ steps.meta-xrdp.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Build and push XRDP Gateway image
+      - name: Extract metadata for xrdp-gateway
+        id: meta-gateway
+        uses: docker/metadata-action@v5.0.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-xrdp-gateway
+
+      - name: Build and push xrdp-gateway Docker image
+        id: build-and-push-gateway
+        uses: docker/build-push-action@v5.0.0
+        with:
+          context: ./xrdp-gateway
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-gateway.outputs.tags }}
+          labels: ${{ steps.meta-gateway.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Sign xrdp image
+      - name: Sign xrdp image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          TAGS: ${{ steps.meta-xrdp.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push-xrdp.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
+
+      # Sign xrdp-gateway image
+      - name: Sign xrdp-gateway image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          TAGS: ${{ steps.meta-gateway.outputs.tags }}
+          DIGEST: ${{ steps.build-and-push-gateway.outputs.digest }}
+        run: echo "${TAGS}" | xargs -I {} cosign sign --yes {}@${DIGEST}
